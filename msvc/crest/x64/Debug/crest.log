@@ -1,0 +1,8 @@
+﻿  crest.cpp
+  Please define _WIN32_WINNT or _WIN32_WINDOWS appropriately. For example:
+  - add -D_WIN32_WINNT=0x0501 to the compiler command line; or
+  - add _WIN32_WINNT=0x0501 to your project's Preprocessor Definitions.
+  Assuming _WIN32_WINNT=0x0501 (i.e. Windows XP target).
+e:\buke\programming\timax\rest_rpc\kapok\kapok\jsonutil.hpp : warning C4819: The file contains a character that cannot be represented in the current code page (936). Save the file in Unicode format to prevent data loss
+e:\buke\programming\timax\rest_rpc\thread-pool-cpp\thread_pool\worker.hpp(81): warning C4146: unary minus operator applied to unsigned type, result still unsigned
+  crest.vcxproj -> E:\buke\programming\Timax\crest\msvc\x64\Debug\crest.lib
