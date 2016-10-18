@@ -12,6 +12,9 @@ typedef void(*crest_on_error)(int, char const*);
 typedef void* crest_client_t;
 typedef void* crest_endpoint_t;
 
+int crest_global_init();
+void crest_global_uninit();
+
 crest_client_t crest_create_client();
 void crest_release_client(crest_client_t server);
 
