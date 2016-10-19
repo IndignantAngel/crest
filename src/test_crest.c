@@ -1,0 +1,117 @@
+#include <crest.h>
+#include <stdlib.h>
+#include <msgpack.h>
+#include <stdio.h>
+
+#define ADD_RPC "add"
+
+crest_client_t		client_handler;
+crest_endpoint_t		endpoint_handler;
+
+void test_sync_call()
+{
+	int rc;
+	msgpack_sbuffer sbuf;
+	msgpack_sbuffer_init(&sbuf);
+
+	msgpack_packer pk;
+	msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
+
+	// serialize 1 and 2
+	msgpack_pack_array(&pk, 2);
+	msgpack_pack_int(&pk, 1);
+	msgpack_pack_int(&pk, 2);
+
+	crest_call_param_t sync_call_param;
+	memset(&sync_call_param, 0, sizeof(crest_call_param_t));
+	sync_call_param.client = client_handler;
+	sync_call_param.endpoint = endpoint_handler;
+	sync_call_param.request.topic = ADD_RPC;
+	sync_call_param.request.data = sbuf.data;
+	sync_call_param.request.size = sbuf.size;
+
+	rc = crest_call(&sync_call_param);
+	if (rc != 0)
+	{
+		printf("Rpc call failed!\n");
+	}
+	else
+	{
+		printf("Rpc call success\n");
+	}
+
+	// you have to clean the memory all by yourself
+	if (NULL != sync_call_param.response.data)
+		free(sync_call_param.response.data);
+}
+
+void async_recv_function(char const* data, size_t size)
+{
+	printf("success!\n");
+}
+
+void async_error_function(int ec, char const* message)
+{
+	printf("error code: %d, error message: %s.\n", ec, message);
+}
+
+void test_async_call()
+{
+	int rc;
+	msgpack_sbuffer sbuf;
+	msgpack_sbuffer_init(&sbuf);
+
+	msgpack_packer pk;
+	msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
+
+	// serialize 1 and 2
+	msgpack_pack_array(&pk, 2);
+	msgpack_pack_int(&pk, 1);
+	msgpack_pack_int(&pk, 2);
+
+	crest_call_async_param_t call_param;
+	memset(&call_param, 0, sizeof(crest_call_async_param_t));
+	call_param.client = client_handler;
+	call_param.endpoint = endpoint_handler;
+	call_param.request.topic = ADD_RPC;
+	call_param.request.size = sbuf.size;
+	call_param.request.data = sbuf.data;
+	call_param.on_recv = async_recv_function;
+	call_param.on_error = async_error_function;
+
+	rc = crest_async_call(&call_param);
+	if (rc != 0)
+	{
+		printf("rpc call failed!\n");
+	}
+}
+
+void test_sub()
+{
+
+}
+
+int main(int argc, char* argv[])
+{
+	int rc;
+	rc = crest_global_init();
+	if (rc != 0)
+		return -1;
+
+	client_handler = crest_create_client();
+	if (NULL == client_handler)
+		return -1;
+
+	endpoint_handler = crest_create_endpoint("127.0.0.1", 9000);
+	if (NULL == endpoint_handler)
+		return -1;
+
+	test_sync_call();
+	test_async_call();
+
+	getchar();
+	crest_release_endpoint(endpoint_handler);
+	crest_release_client(client_handler);
+	crest_global_uninit();
+	return 0;
+}

@@ -150,8 +150,8 @@ int crest_async_call(crest_call_async_param_t* call_param)
 			e(static_cast<int>(error.get_error_code()), error.get_error_message().c_str());
 		};
 	
-		task.ctx_->timeout = call_param->timeout == 0 ?
-			std::chrono::microseconds::max() : std::chrono::microseconds(call_param->timeout);
+		//task.ctx_->timeout = call_param->timeout == 0 ?
+		//	std::chrono::microseconds::max() : std::chrono::microseconds(call_param->timeout);
 	}
 	
 	return 0;
