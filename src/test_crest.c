@@ -50,7 +50,7 @@ void async_recv_function(char const* data, size_t size)
 	printf("success!\n");
 }
 
-void async_error_function(int ec, char const* message)
+void error_function(int ec, char const* message)
 {
 	printf("error code: %d, error message: %s.\n", ec, message);
 }
@@ -77,7 +77,7 @@ void test_async_call()
 	call_param.request.size = sbuf.size;
 	call_param.request.data = sbuf.data;
 	call_param.on_recv = async_recv_function;
-	call_param.on_error = async_error_function;
+	call_param.on_error = error_function;
 
 	rc = crest_async_call(&call_param);
 	if (rc != 0)
@@ -86,9 +86,26 @@ void test_async_call()
 	}
 }
 
+void sub_recv_function(char const* data, size_t size)
+{
+	printf("sub recv\n");
+}
+
 void test_sub()
 {
+	crest_recv_param_t recv_param;
+	memset(&recv_param, 0, sizeof(crest_recv_param_t));
+	recv_param.client = client_handler;
+	recv_param.endpoint = endpoint_handler;
+	recv_param.on_error = error_function;
+	recv_param.on_recv = sub_recv_function;
+	recv_param.topic = "sub_add";
 
+	int rc = crest_async_recv(&recv_param);
+	if (0 != rc)
+	{
+		printf("sub failed!\n");
+	}
 }
 
 int main(int argc, char* argv[])
@@ -106,8 +123,9 @@ int main(int argc, char* argv[])
 	if (NULL == endpoint_handler)
 		return -1;
 
-	test_sync_call();
-	test_async_call();
+	//test_sync_call();
+	//test_async_call();
+	test_sub();
 
 	getchar();
 	crest_release_endpoint(endpoint_handler);
