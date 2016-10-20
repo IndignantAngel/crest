@@ -132,7 +132,7 @@ int crest_async_call(crest_call_async_param_t* call_param);
 ```
 其相关结构体和回调函数定义如下：
 ```c
-typedef void(*crest_on_recieve_message)(char const*, size_t);
+typedef int(*crest_on_recieve_message)(char const*, size_t);
 typedef void(*crest_on_error)(int, char const*);
 
 typedef struct {
@@ -146,9 +146,10 @@ typedef struct {
 ```
 on_recv是rpc成功返回后的回调，而on_error是rpc发生错误的时候的回调。timeout是超时时间。使用范例如下：
 ```c
-void async_recv_function(char const* data, size_t size)
+int async_recv_function(char const* data, size_t size)
 {
 	printf("success!\n");
+	return 0;
 }
 
 void error_function(int ec, char const* message)
@@ -187,7 +188,7 @@ void test_async_call()
 	}
 }
 ```
-用户不用操心回调函数中的数据生命周期，由crest自己维护。
+用户不用操心回调函数中的数据生命周期，由crest自己维护。receive函数的返回值在async call中可以忽略，它在下面的订阅发布中有重要的作用。
 
 ### 订阅一个主题
 订阅主题使用sub接口，其完整定义如下:
@@ -204,6 +205,14 @@ int crest_async_recv(crest_recv_param_t* recv_param);
 ```
 订阅主题只有异步接口，其的使用范例如下：
 ```c
+int sub_recv_function(char const* data, size_t size)
+{
+	printf("sub recv\n");
+	return 0;
+
+	// to stop, return a value that not equals to 0
+}
+
 void test_sub()
 {
 	crest_recv_param_t recv_param;
@@ -221,6 +230,7 @@ void test_sub()
 	}
 }
 ```
+sub_recv_function的返回值可以用来终止订阅的回调循环。如果返回一个非零值，订阅主题的回调函数退出后，不再会进入，并会终止这一次订阅。
 
 ## 尾巴
 [仓库地址](https://github.com/IndignantAngel/crest)，接口不够用随时与我沟通，我会及时添加和维护bug.

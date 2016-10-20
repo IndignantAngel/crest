@@ -45,9 +45,10 @@ void test_sync_call()
 		free(sync_call_param.response.data);
 }
 
-void async_recv_function(char const* data, size_t size)
+int async_recv_function(char const* data, size_t size)
 {
 	printf("success!\n");
+	return 0;
 }
 
 void error_function(int ec, char const* message)
@@ -86,9 +87,10 @@ void test_async_call()
 	}
 }
 
-void sub_recv_function(char const* data, size_t size)
+int sub_recv_function(char const* data, size_t size)
 {
 	printf("sub recv\n");
+	return 0;
 }
 
 void test_sub()

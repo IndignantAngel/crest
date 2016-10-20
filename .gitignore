@@ -11,3 +11,4 @@ Release
 *.user
 /build
 /client_proxy/build
+/install

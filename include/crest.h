@@ -8,7 +8,7 @@ extern "C" {
 #endif
 
 typedef void(*crest_post_send_message)(int);
-typedef void(*crest_on_recieve_message)(char const*, size_t);
+typedef int(*crest_on_recieve_message)(char const*, size_t);
 typedef void(*crest_on_error)(int, char const*);
 
 typedef void* crest_client_t;

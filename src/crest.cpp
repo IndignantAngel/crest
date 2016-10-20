@@ -142,8 +142,14 @@ int crest_async_call(crest_call_async_param_t* call_param)
 		timax::rpc::rpc_task<crest::codec_policy> task{ *client, ctx };
 	
 		if (nullptr != call_param->on_recv)
-			task.ctx_->on_ok = call_param->on_recv;
-	
+		{
+			task.ctx_->on_ok = [on_recv = call_param->on_recv]
+				(char const* data, size_t size)
+			{
+				on_recv(data, size);
+			};
+		}
+		
 		if (nullptr != call_param->on_error)
 			task.ctx_->on_error = [e = call_param->on_error](timax::rpc::exception const& error)
 		{
@@ -185,7 +191,10 @@ int crest_async_recv(crest_recv_param_t* recv_param)
 	{
 		func = [on_recv = recv_param->on_recv](char const* data, size_t size)
 		{
-			on_recv(data, size);
+			if (0 != on_recv(data, size))
+			{
+				throw timax::rpc::exception{ timax::rpc::error_code::CANCEL, "canceled by client error." };
+			}
 		};
 	}
 
