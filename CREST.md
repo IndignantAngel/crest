@@ -1,5 +1,75 @@
 # CREST接口使用说明
-## 初始化与释放
+## 数据结构与回调函数
+```cpp
+// crest客户端实例指针
+typedef void* crest_client_t;
+```
+```cpp
+// crest连接点实例指针
+typedef void* crest_endpoint_t;
+```
+```cpp
+// crest发送请求结构体
+typedef struct {
+	char const*         topic;		// 请求的topic
+	char const*         data;		// 请求数据的起始地址
+	size_t              size;		// 请求的数据长度
+} crest_request_t;
+```
+```cpp
+// crest应答数据结构
+typedef struct {
+	char*               data;		// 应答数据的起始地址
+	size_t              size;		// 应答数据的长度
+} crest_response_t;
+```
+```cpp
+// crest调用数据结构
+typedef struct {
+	crest_client_t 	    client;		// 客户端指针
+	crest_endpoint_t    endpoint;		// 连接点指针
+	crest_request_t	    request;		// 请求结构体
+	crest_response_t    response;		// 应答结构体
+	size_t              timeout;		// 超时时间，以毫秒为单位
+} crest_call_param_t;
+```
+```cpp
+// 收到应答时的回调函数，在异步接口中使用
+// 返回值：在sub中有效，在call中无效。非零，退出订阅状态；零，维持订阅状态
+// 参数1：char const*， 收到数据的起始地址
+// 参数2：size_t，收到数据的长度
+typedef int(*crest_on_recieve_message)(char const*, size_t);
+```
+```cpp
+// 在使用crest异步接口中的错误回调
+// 参数1: 错误码
+// 参数2：错误消息字符串
+typedef void(*crest_on_error)(int, char const*);
+```
+```cpp
+// 异步接口的输入参数数据结构
+typedef struct {
+	crest_client_t              client;		// 客户端指针
+	crest_endpoint_t            endpoint;		// 连接点指针 
+	crest_request_t	            request;		// 请求结构体
+	crest_on_recieve_message    on_recv;		// 接受消息回调函数
+	crest_on_error              on_error;		// 接收消息错误的回调函数
+	size_t                      timeout;		// 超时，以毫秒为单位
+} crest_call_async_param_t;
+```
+```cpp
+// 订阅主题的数据结构
+typedef struct {
+	crest_client_t 			client;		// 客户端指针
+	crest_endpoint_t 		endpoint; 	// 连接点指针
+	char const* 			topic;  	// 订阅的主题
+	crest_on_recieve_message 	on_recv; 	// 接受消息回调函数
+	crest_on_error 			on_error; 	// 接收消息错误的回调函数
+} crest_recv_param_t;
+```
+
+## 应用程序接口说明
+### 初始化与释放
 crest在使用前需要进行初始化，使用完成后需要释放。初始化需要做一些创建线程池和工作线程的工作，使用接口如下
 ```c
 int crest_global_init();
@@ -21,7 +91,7 @@ void crest_global_uninit();
 ```
 释放crest会阻塞当前线程，直到所有资源释放，工作者线程退出。
 
-## 创建客户端与连接点
+### 创建客户端与连接点
 crest允许多个客户端实例，并采用是非面向连接的设计。因此，每一次rpc调用或者订阅某一个主题都需要显式地指定客户端句柄及服务器的连接点。我们使用下列接口创建和销毁客户端：
 ```c
 crest_client_t crest_create_client();
@@ -58,32 +128,11 @@ if(NULL == endpoint)
 crest_release_endpoint(endpoint);
 ```
 
-## rpc调用
-### 同步rpc调用
+### rpc调用
+#### 同步rpc调用
 使用如下接口进行一次同步的rpc调用
 ```c
 int crest_call(crest_call_param* call_param);
-```
-其中的参数结构体如下：
-```c
-typedef struct {
-	char const*         topic;
-	char const*         data;
-	size_t              size;
-} crest_request_t;
-
-typedef struct {
-	char*               data;
-	size_t              size;
-} crest_response_t;
-
-typedef struct {
-	crest_client_t 	    client;
-	crest_endpoint_t    endpoint;
-	crest_request_t	    request;
-	crest_response_t    response;
-	size_t              timeout;
-} crest_call_param_t;
 ```
 crest_request_t结构体是rpc调用需要向服务器发送的数据，crest_response_t是服务器返回的数据，用户在处理了这个结构体后，要自行清理其中的data的内存分配。同步rpc调用的范例如下:
 ```c
@@ -125,24 +174,10 @@ void test_sync_call()
 		free(sync_call_param.response.data);
 }
 ```
-### 异步rpc调用
+#### 异步rpc调用
 异步rpc调用使用如下接口:
 ```c
 int crest_async_call(crest_call_async_param_t* call_param);
-```
-其相关结构体和回调函数定义如下：
-```c
-typedef int(*crest_on_recieve_message)(char const*, size_t);
-typedef void(*crest_on_error)(int, char const*);
-
-typedef struct {
-	crest_client_t              client;
-	crest_endpoint_t            endpoint;
-	crest_request_t	            request;
-	crest_on_recieve_message    on_recv;
-	crest_on_error              on_error;
-	size_t                      timeout;
-} crest_call_async_param_t;
 ```
 on_recv是rpc成功返回后的回调，而on_error是rpc发生错误的时候的回调。timeout是超时时间。使用范例如下：
 ```c
@@ -193,14 +228,6 @@ void test_async_call()
 ### 订阅一个主题
 订阅主题使用sub接口，其完整定义如下:
 ```c
-typedef struct {
-	crest_client_t              client;
-	crest_endpoint_t            endpoint;
-	char const*                 topic;
-	crest_on_recieve_message    on_recv;
-	crest_on_error              on_error;
-} crest_recv_param_t;
-
 int crest_async_recv(crest_recv_param_t* recv_param);
 ```
 订阅主题只有异步接口，其的使用范例如下：
