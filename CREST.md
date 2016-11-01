@@ -134,6 +134,15 @@ crest_release_endpoint(endpoint);
 ```c
 int crest_call(crest_call_param* call_param);
 ```
+其返回值含义如下:
+- 0 - 成功
+- 1 - 未知错误
+- 2 - RPC调用端逻辑错误（服务器的业务函数抛出timax::rpc::exceptiony异常）
+- 3 - 超时
+- 4 - 被取消
+- 5 - 网络库错误
+- -1 - 客户端本地错误
+
 crest_request_t结构体是rpc调用需要向服务器发送的数据，crest_response_t是服务器返回的数据，用户在处理了这个结构体后，要自行清理其中的data的内存分配。同步rpc调用的范例如下:
 ```c
 void test_sync_call()
