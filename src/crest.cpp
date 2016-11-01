@@ -91,27 +91,29 @@ int crest_call(crest_call_param_t* call_param)
 
 	// create topic and send buffer
 	std::string topic = call_param->request.topic;
+	uint64_t topic_hash = client->hash(topic);
 	crest::buffer_t buffer{ call_param->request.data,
 		call_param->request.data + call_param->request.size };
 
 	// call the rpc
 	auto ctx = timax::rpc::make_rpc_context(client->get_io_service(), 
-		*endpoint, topic, crest::codec_policy{}, std::move(buffer));
+		*endpoint, topic_hash, crest::codec_policy{}, std::move(buffer));
 	timax::rpc::rpc_task<crest::codec_policy> task{ *client, ctx };
-	task.do_call_and_wait();
 
-	// handle error
-	auto code = task.ctx_->err.get_error_code();
-
-	// get the result
-	if (code == timax::rpc::error_code::OK)
+	try
 	{
+		task.do_call_and_wait();
+	}
+	catch (timax::rpc::exception const& error)
+	{
+		auto code = static_cast<int>(error.get_error_code());
 		auto& response = task.ctx_->rep;
 		call_param->response.data = reinterpret_cast<char*>(std::malloc(response.size()));
 		std::memcpy(call_param->response.data, response.data(), response.size());
+		return code;
 	}
-	
-	return static_cast<int>(code);
+
+	return 0;
 }
 
 int crest_async_call(crest_call_async_param_t* call_param)
@@ -132,12 +134,13 @@ int crest_async_call(crest_call_async_param_t* call_param)
 	
 	// create topic and send buffer
 	std::string topic = call_param->request.topic;
+	uint64_t topic_hash = client->hash(topic);
 	crest::buffer_t buffer{ call_param->request.data,
 		call_param->request.data + call_param->request.size };
 	
 	{
 		auto ctx = timax::rpc::make_rpc_context(client->get_io_service(),
-			*endpoint, topic, crest::codec_policy{}, std::move(buffer));
+			*endpoint, topic_hash, crest::codec_policy{}, std::move(buffer));
 
 		timax::rpc::rpc_task<crest::codec_policy> task{ *client, ctx };
 	
@@ -156,8 +159,8 @@ int crest_async_call(crest_call_async_param_t* call_param)
 			e(static_cast<int>(error.get_error_code()), error.get_error_message().c_str());
 		};
 	
-		//task.ctx_->timeout = call_param->timeout == 0 ?
-		//	std::chrono::microseconds::max() : std::chrono::microseconds(call_param->timeout);
+		task.ctx_->timeout = call_param->timeout == 0 ?
+			std::chrono::microseconds::max() : std::chrono::microseconds(call_param->timeout);
 	}
 	
 	return 0;
