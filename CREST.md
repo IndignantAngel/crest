@@ -130,9 +130,10 @@ crest_release_endpoint(endpoint);
 
 ### rpc调用
 #### 同步rpc调用
-使用如下接口进行一次同步的rpc调用
+使用如下接口进行一次同步的rpc调用，pub接口的使用方式一样：
 ```c
-int crest_call(crest_call_param* call_param);
+int crest_call(crest_call_param* call_param);		// 普通的RPC调用
+int crest_pub(crest_call_param* call_param);		// 向服务器广播这个topic
 ```
 其返回值含义如下:
 - 0 - 成功
@@ -184,9 +185,10 @@ void test_sync_call()
 }
 ```
 #### 异步rpc调用
-异步rpc调用使用如下接口:
+异步rpc调用使用如下接口，异步地广播一个topic使用方法相同：
 ```c
-int crest_async_call(crest_call_async_param_t* call_param);
+int crest_async_call(crest_call_async_param_t* call_param);		// 异步调用RPC接口
+int crest_async_pub(crest_call_async_param_t* call_param);		// 异步地向服务器广播一个topic
 ```
 on_recv是rpc成功返回后的回调，而on_error是rpc发生错误的时候的回调。timeout是超时时间。使用范例如下：
 ```c

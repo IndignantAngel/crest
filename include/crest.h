@@ -63,9 +63,9 @@ typedef struct {
 	char const* 				topic;
 	crest_on_recieve_message	on_recv;
 	crest_on_error			on_error;
-} crest_recv_param_t;
+} crest_sub_param_t;
 
-int crest_async_recv(crest_recv_param_t* recv_param);
+int crest_async_sub(crest_sub_param_t* recv_param);
 
 #ifdef __cplusplus
 }

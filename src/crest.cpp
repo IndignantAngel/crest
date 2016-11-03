@@ -214,7 +214,7 @@ int crest_async_pub(crest_call_async_param_t* param)
 	return crest_async_impl(param, true);
 }
 
-int crest_async_recv(crest_recv_param_t* recv_param)
+int crest_async_sub(crest_sub_param_t* recv_param)
 {
 	if (nullptr == recv_param)
 		return -1;

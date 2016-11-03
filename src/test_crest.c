@@ -96,15 +96,15 @@ int sub_recv_function(char const* data, size_t size)
 
 void test_sub()
 {
-	crest_recv_param_t recv_param;
-	memset(&recv_param, 0, sizeof(crest_recv_param_t));
+	crest_sub_param_t recv_param;
+	memset(&recv_param, 0, sizeof(crest_sub_param_t));
 	recv_param.client = client_handler;
 	recv_param.endpoint = endpoint_handler;
 	recv_param.on_error = error_function;
 	recv_param.on_recv = sub_recv_function;
 	recv_param.topic = "sub_add";
 
-	int rc = crest_async_recv(&recv_param);
+	int rc = crest_async_sub(&recv_param);
 	if (0 != rc)
 	{
 		printf("sub failed!\n");
