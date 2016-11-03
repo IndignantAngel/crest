@@ -8,6 +8,7 @@ namespace crest
 	using client_private_t = timax::rpc::async_client_private<codec_policy>;
 	using endpoint_t = boost::asio::ip::tcp::endpoint;
 	std::unique_ptr<timax::rpc::io_service_pool> pool;
+	using context_ptr = std::shared_ptr<timax::rpc::rpc_context<codec_policy>>;
 }
 
 int crest_global_init()
@@ -72,34 +73,48 @@ void crest_release_endpoint(crest_endpoint_t endpoint)
 		delete reinterpret_cast<crest::endpoint_t*>(endpoint);
 }
 
-// TODO timeout
-int crest_call(crest_call_param_t* call_param)
+int crest_sync_impl(crest_call_param_t* param, bool is_pub)
 {
-	if (nullptr == call_param)
+	if (nullptr == param)
 		return -1;
 
-	auto client = reinterpret_cast<crest::client_private_t*>(call_param->client);
-	if (nullptr == client)
+	auto crest_client = reinterpret_cast<crest::client_private_t*>(param->client);
+	if (nullptr == crest_client)
 		return -1;
 
-	auto endpoint = reinterpret_cast<crest::endpoint_t*>(call_param->endpoint);
-	if (nullptr == endpoint)
+	auto crest_endpoint = reinterpret_cast<crest::endpoint_t*>(param->endpoint);
+	if (nullptr == crest_endpoint)
 		return -1;
 
-	if (call_param->request.data == nullptr)
+	auto& request = param->request;
+	auto& response = param->response;
+
+	if (!(nullptr != request.data && 0 != request.size && nullptr != request.topic))
 		return -1;
 
-	// create topic and send buffer
-	std::string topic = call_param->request.topic;
-	uint64_t topic_hash = client->hash(topic);
-	crest::buffer_t buffer{ call_param->request.data,
-		call_param->request.data + call_param->request.size };
+	std::string topic = request.topic;
+	uint64_t hash = is_pub ? crest_client->hash(timax::rpc::PUB) : crest_client->hash(topic);
+	crest::buffer_t buffer{ request.data, request.data + request.size };
 
-	// call the rpc
-	auto ctx = timax::rpc::make_rpc_context(client->get_io_service(), 
-		*endpoint, topic_hash, crest::codec_policy{}, std::move(buffer));
-	timax::rpc::rpc_task<crest::codec_policy> task{ *client, ctx };
+	crest::context_ptr ctx;
+	if (is_pub)
+	{
+		ctx = timax::rpc::make_rpc_context<crest::codec_policy>(
+			crest_client->get_io_service(), *crest_endpoint, hash, topic, std::move(buffer));
+	}
+	else
+	{
+		ctx = timax::rpc::make_rpc_context<crest::codec_policy>(
+			crest_client->get_io_service(), *crest_endpoint, hash, std::move(buffer));
+	}
 
+	ctx->timeout = 0 == param->timeout ? std::chrono::nanoseconds::max() :
+		std::chrono::microseconds(param->timeout);
+
+	if (nullptr == ctx)
+		return -1;
+
+	timax::rpc::rpc_task<crest::codec_policy> task{ *crest_client, ctx };
 	try
 	{
 		task.do_call_and_wait();
@@ -107,63 +122,96 @@ int crest_call(crest_call_param_t* call_param)
 	catch (timax::rpc::exception const& error)
 	{
 		auto code = static_cast<int>(error.get_error_code());
-		auto& response = task.ctx_->rep;
-		call_param->response.data = reinterpret_cast<char*>(std::malloc(response.size()));
-		std::memcpy(call_param->response.data, response.data(), response.size());
+		auto& rep = task.ctx_->rep;
+		response.data = reinterpret_cast<char*>(std::malloc(rep.size()));
+		std::memcpy(response.data, rep.data(), rep.size());
 		return code;
 	}
 
 	return 0;
 }
 
-int crest_async_call(crest_call_async_param_t* call_param)
+int crest_call(crest_call_param_t* call_param)
 {
-	if (nullptr == call_param)
+	return crest_sync_impl(call_param, false);
+}
+
+int crest_pub(crest_call_param_t* call_param)
+{
+	return crest_sync_impl(call_param, true);
+}
+
+int crest_async_impl(crest_call_async_param_t* param, bool is_pub)
+{
+	if (nullptr == param)
 		return -1;
-	
-	auto client = reinterpret_cast<crest::client_private_t*>(call_param->client);
+
+	auto client = reinterpret_cast<crest::client_private_t*>(param->client);
 	if (nullptr == client)
 		return -1;
-	
-	auto endpoint = reinterpret_cast<crest::endpoint_t*>(call_param->endpoint);
+
+	auto endpoint = reinterpret_cast<crest::endpoint_t*>(param->endpoint);
 	if (nullptr == endpoint)
 		return -1;
-	
-	if (call_param->request.data == nullptr)
-		return -1;
-	
-	// create topic and send buffer
-	std::string topic = call_param->request.topic;
-	uint64_t topic_hash = client->hash(topic);
-	crest::buffer_t buffer{ call_param->request.data,
-		call_param->request.data + call_param->request.size };
-	
-	{
-		auto ctx = timax::rpc::make_rpc_context(client->get_io_service(),
-			*endpoint, topic_hash, crest::codec_policy{}, std::move(buffer));
 
-		timax::rpc::rpc_task<crest::codec_policy> task{ *client, ctx };
-	
-		if (nullptr != call_param->on_recv)
+	auto& request = param->request;
+	if (!(nullptr != request.data && 0 != request.size && nullptr != request.topic))
+		return -1;
+
+	std::string topic = request.topic;
+	uint64_t hash = is_pub ? client->hash(timax::rpc::PUB) : client->hash(topic);
+	crest::buffer_t buffer{ request.data, request.data + request.size };
+
+	// 233333333
+	{
+		// create rpc context
+		crest::context_ptr ctx;
+		if (is_pub)
 		{
-			task.ctx_->on_ok = [on_recv = call_param->on_recv]
-				(char const* data, size_t size)
+			ctx = timax::rpc::make_rpc_context<crest::codec_policy>(
+				client->get_io_service(), *endpoint, hash, topic, std::move(buffer));
+		}
+		else
+		{
+			ctx = timax::rpc::make_rpc_context<crest::codec_policy>(
+				client->get_io_service(), *endpoint, hash, std::move(buffer));
+		}
+
+		ctx->timeout = 0 == param->timeout ? std::chrono::nanoseconds::max() : 
+			std::chrono::microseconds(param->timeout);
+
+		// create rpc task to manage call process
+		timax::rpc::rpc_task<crest::codec_policy> task{ *client, ctx };
+
+		// async success process
+		if (nullptr != param->on_recv)
+		{
+			task.ctx_->on_ok = [on_recv = param->on_recv]
+			(char const* data, size_t size)
 			{
 				on_recv(data, size);
 			};
 		}
-		
-		if (nullptr != call_param->on_error)
-			task.ctx_->on_error = [e = call_param->on_error](timax::rpc::exception const& error)
+
+		// async error process
+		if (nullptr != param->on_error)
+			task.ctx_->on_error = [e = param->on_error](timax::rpc::exception const& error)
 		{
 			e(static_cast<int>(error.get_error_code()), error.get_error_message().c_str());
 		};
-	
-		task.ctx_->timeout = call_param->timeout == 0 ?
-			std::chrono::microseconds::max() : std::chrono::microseconds(call_param->timeout);
-	}
-	
+	}	// call by the mechanism of RAII
+
 	return 0;
+}
+
+int crest_async_call(crest_call_async_param_t* param)
+{
+	return crest_async_impl(param, false);
+}
+
+int crest_async_pub(crest_call_async_param_t* param)
+{
+	return crest_async_impl(param, true);
 }
 
 int crest_async_recv(crest_recv_param_t* recv_param)

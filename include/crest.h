@@ -43,6 +43,7 @@ typedef struct {
 } crest_call_param_t;
 
 int crest_call(crest_call_param_t* call_param);
+int crest_pub(crest_call_param_t* pub_param);
 
 typedef struct {
 	crest_client_t			client;
@@ -54,6 +55,7 @@ typedef struct {
 } crest_call_async_param_t;
 
 int crest_async_call(crest_call_async_param_t* call_param);
+int crest_async_pub(crest_call_async_param_t* pub_param);
 
 typedef struct {
 	crest_client_t			client;

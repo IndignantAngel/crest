@@ -79,6 +79,7 @@ void test_async_call()
 	call_param.request.data = sbuf.data;
 	call_param.on_recv = async_recv_function;
 	call_param.on_error = error_function;
+	call_param.timeout = 1000;
 
 	rc = crest_async_call(&call_param);
 	if (rc != 0)
@@ -126,8 +127,8 @@ int main(int argc, char* argv[])
 		return -1;
 
 	//test_sync_call();
-	//test_async_call();
-	test_sub();
+	test_async_call();
+	//test_sub();
 
 	getchar();
 	crest_release_endpoint(endpoint_handler);
