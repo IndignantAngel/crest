@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #define ADD_RPC "add"
+#define SUB_ADD "sub_add"
 
 crest_client_t		client_handler;
 crest_endpoint_t		endpoint_handler;
@@ -31,6 +32,42 @@ void test_sync_call()
 	sync_call_param.request.size = sbuf.size;
 
 	rc = crest_call(&sync_call_param);
+	if (rc != 0)
+	{
+		printf("Rpc call failed!\n");
+	}
+	else
+	{
+		printf("Rpc call success\n");
+	}
+
+	// you have to clean the memory all by yourself
+	if (NULL != sync_call_param.response.data)
+		free(sync_call_param.response.data);
+}
+
+void test_sync_pub()
+{
+	int rc;
+	msgpack_sbuffer sbuf;
+	msgpack_sbuffer_init(&sbuf);
+
+	msgpack_packer pk;
+	msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
+
+	// serialize 1 and 2
+	msgpack_pack_array(&pk, 2);
+	msgpack_pack_int(&pk, 1);
+
+	crest_call_param_t sync_call_param;
+	memset(&sync_call_param, 0, sizeof(crest_call_param_t));
+	sync_call_param.client = client_handler;
+	sync_call_param.endpoint = endpoint_handler;
+	sync_call_param.request.topic = SUB_ADD;
+	sync_call_param.request.data = sbuf.data;
+	sync_call_param.request.size = sbuf.size;
+
+	rc = crest_pub(&sync_call_param);
 	if (rc != 0)
 	{
 		printf("Rpc call failed!\n");
@@ -127,7 +164,8 @@ int main(int argc, char* argv[])
 		return -1;
 
 	//test_sync_call();
-	test_async_call();
+	//test_async_call();
+	test_sync_pub();
 	//test_sub();
 
 	getchar();
