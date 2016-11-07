@@ -5,9 +5,12 @@
   <PropertyGroup />
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(BOOST_ROOT);$(SolutionDir)../../rest_rpc/kapok;$(SolutionDir)../../rest_rpc/spdlog/include;$(SolutionDir)../../rest_rpc/msgpack/include;$(SolutionDir)../../rest_rpc/thread-pool-cpp/thread_pool;$(SolutionDir)../../rest_rpc/kapok/fmt;$(SolutionDir)../../rest_rpc</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(BOOST_INCLUDE_PATH);$(SolutionDir)../../rest_rpc/kapok;$(SolutionDir)../../rest_rpc/spdlog/include;$(SolutionDir)../../rest_rpc/msgpack/include;$(SolutionDir)../../rest_rpc/thread-pool-cpp/thread_pool;$(SolutionDir)../../rest_rpc/kapok/fmt;$(SolutionDir)../../rest_rpc</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;FMT_HEADER_ONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(BOOST_LIB_PATH);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
   </ItemDefinitionGroup>
   <ItemGroup />
 </Project>

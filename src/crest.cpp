@@ -109,7 +109,7 @@ int crest_sync_impl(crest_call_param_t* param, bool is_pub)
 	}
 
 	ctx->timeout = 0 == param->timeout ? std::chrono::nanoseconds::max() :
-		std::chrono::microseconds(param->timeout);
+		std::chrono::milliseconds(param->timeout);
 
 	if (nullptr == ctx)
 		return -1;
@@ -178,7 +178,7 @@ int crest_async_impl(crest_call_async_param_t* param, bool is_pub)
 		}
 
 		ctx->timeout = 0 == param->timeout ? std::chrono::nanoseconds::max() : 
-			std::chrono::microseconds(param->timeout);
+			std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::microseconds(param->timeout));
 
 		// create rpc task to manage call process
 		timax::rpc::rpc_task<crest::codec_policy> task{ *client, ctx };

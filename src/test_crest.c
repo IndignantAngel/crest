@@ -30,6 +30,7 @@ void test_sync_call()
 	sync_call_param.request.topic = ADD_RPC;
 	sync_call_param.request.data = sbuf.data;
 	sync_call_param.request.size = sbuf.size;
+	sync_call_param.timeout = 1000;
 
 	rc = crest_call(&sync_call_param);
 	if (rc != 0)
@@ -116,7 +117,7 @@ void test_async_call()
 	call_param.request.data = sbuf.data;
 	call_param.on_recv = async_recv_function;
 	call_param.on_error = error_function;
-	call_param.timeout = 1000;
+	call_param.timeout = 0;
 
 	rc = crest_async_call(&call_param);
 	if (rc != 0)
@@ -163,9 +164,9 @@ int main(int argc, char* argv[])
 	if (NULL == endpoint_handler)
 		return -1;
 
-	//test_sync_call();
+	test_sync_call();
 	//test_async_call();
-	test_sync_pub();
+	//test_sync_pub();
 	//test_sub();
 
 	getchar();
