@@ -126,6 +126,37 @@ void test_async_call()
 	}
 }
 
+void test_async_pub()
+{
+	int rc;
+	msgpack_sbuffer sbuf;
+	msgpack_sbuffer_init(&sbuf);
+
+	msgpack_packer pk;
+	msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
+
+	// serialize 1 and 2
+	msgpack_pack_array(&pk, 2);
+	msgpack_pack_int(&pk, 1);
+	msgpack_pack_int(&pk, 2);
+
+	crest_call_async_param_t call_param;
+	memset(&call_param, 0, sizeof(crest_call_async_param_t));
+	call_param.client = client_handler;
+	call_param.endpoint = endpoint_handler;
+	call_param.request.topic = "sub_add";
+	call_param.request.size = sbuf.size;
+	call_param.request.data = sbuf.data;
+	call_param.on_recv = async_recv_function;
+	call_param.on_error = error_function;
+
+	rc = crest_async_pub(&call_param);
+	if (rc != 0)
+	{
+		printf("rpc call failed!\n");
+	}
+}
+
 int sub_recv_function(char const* data, size_t size)
 {
 	printf("sub recv\n");
@@ -164,10 +195,11 @@ int main(int argc, char* argv[])
 	if (NULL == endpoint_handler)
 		return -1;
 
-	test_sync_call();
+	//test_sync_call();
 	//test_async_call();
 	//test_sync_pub();
 	//test_sub();
+	test_async_pub();
 
 	getchar();
 	crest_release_endpoint(endpoint_handler);
